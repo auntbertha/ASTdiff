@@ -101,7 +101,8 @@ def collect_paths(from_commit, to_commit):
     if to_commit:
         cmd += " {}".format(to_commit)
 
-    print("{c.lightSlateGray}Running: {cmd}".format(c=c, cmd=cmd))
+    # noinspection PyUnresolvedReferences
+    stderr(c.lightSlateGray | "Running: {cmd}".format(cmd=cmd))
     return shell(cmd).splitlines()
 
 
