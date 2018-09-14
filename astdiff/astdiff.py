@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 
-from typing import Union, List, Any, Sequence, Optional
+from typing import Union, List, Any, Sequence, Optional, Tuple
 import ast
 import subprocess
 import sys
@@ -17,6 +17,10 @@ import colorful as c
 
 
 NodeType = Union[ast.AST, List, str]
+
+
+# noinspection PyUnresolvedReferences
+color = c.format
 
 
 def compare_ast(left, right, left_lineno, right_lineno):
@@ -101,6 +105,60 @@ def collect_paths(from_commit, to_commit):
     return shell(cmd).splitlines()
 
 
+def get_ref(commit):
+    # type: (Optional[str]) -> Optional[str]
+    """Convert a commit to its hash.
+
+    It handles the syntax for references, such as special names like HEAD or
+    @, parents commits, and many more. See `git help rev-parse` for full
+    reference.
+
+    Return `None` if the input is `None`.
+    """
+    if commit is None:
+        return None
+    return shell("git rev-parse {}".format(commit))
+
+
+def get_commits(commits):
+    # type: (Sequence[str]) -> Tuple[str, Optional[str]]
+    """Process the commit references given as parameters to the command.
+
+    Return a pair of hashes identifying the range that we want to compare.
+    The second commit equal to `None` signals that we want to compare against
+    the working tree.
+    """
+    if not commits:
+        commit2 = None
+        commit1 = "HEAD"
+    elif len(commits) == 1:
+        commit2 = commits[0]
+        commit1 = "{}~1".format(get_ref(commit2))
+    elif len(commits) == 2:
+        commit1, commit2 = commits
+        if commit2 == ".":
+            commit2 = None
+    else:
+        raise ValueError("invalid commit references: {}".format(commits))
+    return get_ref(commit1), get_ref(commit2)
+
+
+def stderr(*messages, **kwargs):
+    # type: (str, Any) -> None
+    print(
+        color("\n".join(str(msg) for msg in messages if str(msg))),
+        file=sys.stderr,
+        **kwargs
+    )
+
+
+def error(*messages, code=1):
+    # type: (str, int) -> int
+    stderr("💥 🔥 💥", *messages)
+    return code
+
+
+# noinspection PyUnresolvedReferences
 @click.command()
 @click.argument("commits", nargs=-1)
 def astdiff(commits):
@@ -115,63 +173,61 @@ def astdiff(commits):
     (COMMIT2 can be a dot '.' to compare between COMMIT1 and the working tree)
     """
 
-    if not commits:
-        commit2 = None
-        commit1 = "HEAD"
-    elif len(commits) == 1:
-        commit = commits[0]
-        if commit == "@":
-            commit2 = "HEAD"
-            commit1 = "HEAD~1"
-        else:
-            commit2 = commit
-            commit1 = "{}~1".format(commit2)
-    elif len(commits) == 2:
-        commit1, commit2 = commits
-        if commit2 == ".":
-            commit2 = None
-    else:
-        click.echo(click.get_current_context().get_help())
-        sys.exit(1)
+    try:
+        commit1, commit2 = get_commits(commits)
+    except ValueError as exc:
+        sys.exit(c.red | error(str(exc)))
 
     try:
         paths = collect_paths(commit1, commit2)
     except subprocess.CalledProcessError as exc:
-        print("Failed to collect files")
-        print(exc)
-        sys.exit(1)
+        _, cmd = exc.args
+        sys.exit(
+            error(
+                "Failed to collect files",
+                c.orange | "'{}' " "failed".format(" ".join(cmd)),
+            )
+        )
 
-    all_well = True
+    ok = 0
+    fails = 0
+    errors = 0
     for path in paths:
         if not path.endswith(".py"):
             continue
 
         try:
-            print(
+            stderr(
                 "{c.cyan}Checking {path}{c.reset} ... ".format(c=c, path=path),
                 end="",
             )
             old = get_object(commit1, path)
             new = get_object(commit2, path)
             compare_ast(ast.parse(old), ast.parse(new), 0, 0)
-            print("{c.green}ok{c.reset}".format(c=c))
+            stderr(c.green | "ok")
+            ok += 1
         except AssertionError as exc:
-            print("{c.bold}{c.red}failed{c.reset}".format(c=c))
-            print("{c.yellow}{exc}{c.reset}".format(c=c, exc=exc))
-            all_well = False
-        except SyntaxError:
-            print("{c.bold}{c.red}failed to parse{c.reset}".format(c=c))
-            all_well = False
+            stderr(c.bold & c.red | "failed", str(exc))
+            fails += 1
+        except SyntaxError as exc:
+            stderr(c.bold & c.orange | "failed to parse", str(exc))
+            errors += 1
         except subprocess.CalledProcessError as exc:
-            print("{c.bold}{c.orange}git failed{c.reset}".format(c=c))
-            print("{c.yellow}{exc}{c.reset}".format(c=c, exc=exc))
-            all_well = False
-    print()
-    if all_well:
-        print("✨ {c.green}All files are equivalent!{c.reset} ✨".format(c=c))
+            _, cmd = exc.args
+            stderr(c.bold & c.orange | "git failed", " ".join(cmd))
+            errors += 1
+    if fails == errors == 0:
+        stderr(c.green | "✨ All files are equivalent! ✨")
+        sys.exit(0)
     else:
-        print("💥 {c.red}Uh oh, some files are different{c.reset} 💥".format(c=c))
-    sys.exit(0 if all_well else 1)
+        sys.exit(
+            error(
+                c.red | "Uh-oh, there are errors:",
+                c.cyan | "{} files ok".format(ok) if ok else "",
+                c.red | "{} files failed".format(fails) if fails else "",
+                c.orange | "{} errors".format(errors) if errors else "",
+            )
+        )
 
 
 if __name__ == "__main__":
