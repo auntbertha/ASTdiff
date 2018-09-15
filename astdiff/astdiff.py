@@ -11,7 +11,6 @@ import os
 
 from six.moves import zip_longest
 from six import string_types
-
 import click
 import colorful as c
 
@@ -60,10 +59,12 @@ def assert_equal(left, right, left_lineno, right_lineno):
     Return `None` if equal, and raise an exception with the line number
     otherwise.
     """
-    assert (
-        left == right
-    ), "different nodes at lines left:{}, and right:{}\n{} != {}".format(
-        left_lineno, right_lineno, nice(left), nice(right)
+    assert left == right, (
+        "different nodes:\n"
+        "line {} in first commit: {}\n"
+        "line {} in second commit: {}".format(
+            left_lineno, nice(left), right_lineno, nice(right)
+        )
     )
 
 
@@ -174,8 +175,16 @@ def error(*messages):
     stderr("💥 🔥 💥", *messages)
 
 
+def shell_error(message, exc):
+    # type: (str, subprocess.CalledProcessError) -> None
+    """Display an error from a shell command. """
+    _, cmd = exc.args
+    # noinspection PyUnresolvedReferences
+    error(message, c.orange | "'{}' failed".format(" ".join(cmd)))
+
+
 # noinspection PyUnresolvedReferences
-@click.command()
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument("commits", nargs=-1)
 def astdiff(commits):
     # type: (Sequence[str]) -> None
@@ -194,15 +203,14 @@ def astdiff(commits):
     except ValueError as exc:
         error(c.red | str(exc))
         sys.exit(1)
+    except subprocess.CalledProcessError as exc:
+        shell_error("Failed to compute commits", exc)
+        sys.exit(1)
 
     try:
         paths = collect_paths(commit1, commit2)
     except subprocess.CalledProcessError as exc:
-        _, cmd = exc.args
-        error(
-            "Failed to collect files",
-            c.orange | "'{}' failed".format(" ".join(cmd)),
-        )
+        shell_error("Failed to collect files", exc)
         sys.exit(1)
 
     ok = 0
@@ -219,7 +227,7 @@ def astdiff(commits):
             )
             old = get_object(commit1, path)
             new = get_object(commit2, path)
-            compare_ast(ast.parse(old), ast.parse(new), 0, 0)
+            compare_ast(ast.parse(old), ast.parse(new), 1, 1)
             stderr(c.green | "ok")
             ok += 1
         except AssertionError as exc:
@@ -229,8 +237,8 @@ def astdiff(commits):
             stderr(c.bold & c.orange | "failed to parse", exc)
             errors += 1
         except subprocess.CalledProcessError as exc:
-            _, cmd = exc.args
-            stderr(c.bold & c.orange | "git failed", " ".join(cmd))
+            stderr("git failed")
+            shell_error("", exc)
             errors += 1
 
     if fails == errors == 0:
