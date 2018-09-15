@@ -63,8 +63,19 @@ def assert_equal(left, right, left_lineno, right_lineno):
     assert (
         left == right
     ), "different nodes at lines left:{}, and right:{}\n{} != {}".format(
-        left_lineno, right_lineno, left, right
+        left_lineno, right_lineno, nice(left), nice(right)
     )
+
+
+def nice(obj):
+    # type: (Any) -> str
+    """Get a nice repr of AST objects, or the usual `str` otherwise. """
+
+    if isinstance(obj, ast.AST):
+        return type(obj).__name__
+    if isinstance(obj, type):
+        return obj.__name__
+    return str(obj)
 
 
 def shell(cmd):
