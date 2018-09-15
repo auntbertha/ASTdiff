@@ -35,12 +35,12 @@ def test_compare_different_length_lists():
         assert compare_ast(["foo"], ["spam", "eggs"], 0, 0)
 
 
-def test_compare_equal_nodes():
+def test_compare_equal_values():
     node = ast.parse("x = 0")
     assert compare_ast(node, node, 0, 0) is None
 
 
-def test_compare_different_nodes():
+def test_compare_different_values():
     node1 = ast.parse("x = 1")
     node2 = ast.parse("y = 1")
     with pytest.raises(AssertionError):
@@ -59,3 +59,10 @@ def test_compare_different_formatting(ast_a1, ast_b1):
 def test_compare_sets(ast_set1, ast_set2):
     with pytest.raises(AssertionError):
         compare_ast(ast_set1, ast_set2, 0, 0)
+
+
+def test_compare_different_nodes():
+    node1 = ast.parse("x = 1")
+    node2 = ast.parse("import foo")
+    with pytest.raises(AssertionError):
+        compare_ast(node1, node2, 0, 0)
