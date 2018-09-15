@@ -156,7 +156,12 @@ def get_commits(commits):
 
 
 def stderr(*messages, **kwargs):
-    # type: (str, Any) -> None
+    # type: (Any, Any) -> None
+    """Send messages to stderr.
+
+    Print one argument per line, and support colored arguments.
+    `kwargs` are passed to the `print` function.
+    """
     print(
         color("\n".join(str(msg) for msg in messages if str(msg))),
         file=sys.stderr,
@@ -164,10 +169,9 @@ def stderr(*messages, **kwargs):
     )
 
 
-def error(*messages, code=1):
-    # type: (str, int) -> int
+def error(*messages):
+    # type: (str) -> None
     stderr("💥 🔥 💥", *messages)
-    return code
 
 
 # noinspection PyUnresolvedReferences
@@ -188,18 +192,18 @@ def astdiff(commits):
     try:
         commit1, commit2 = get_commits(commits)
     except ValueError as exc:
-        sys.exit(c.red | error(str(exc)))
+        error(c.red | str(exc))
+        sys.exit(1)
 
     try:
         paths = collect_paths(commit1, commit2)
     except subprocess.CalledProcessError as exc:
         _, cmd = exc.args
-        sys.exit(
-            error(
-                "Failed to collect files",
-                c.orange | "'{}' " "failed".format(" ".join(cmd)),
-            )
+        error(
+            "Failed to collect files",
+            c.orange | "'{}' failed".format(" ".join(cmd)),
         )
+        sys.exit(1)
 
     ok = 0
     fails = 0
@@ -219,27 +223,27 @@ def astdiff(commits):
             stderr(c.green | "ok")
             ok += 1
         except AssertionError as exc:
-            stderr(c.bold & c.red | "failed", str(exc))
+            stderr(c.bold & c.red | "failed", exc)
             fails += 1
         except SyntaxError as exc:
-            stderr(c.bold & c.orange | "failed to parse", str(exc))
+            stderr(c.bold & c.orange | "failed to parse", exc)
             errors += 1
         except subprocess.CalledProcessError as exc:
             _, cmd = exc.args
             stderr(c.bold & c.orange | "git failed", " ".join(cmd))
             errors += 1
+
     if fails == errors == 0:
         stderr(c.green | "✨ All files are equivalent! ✨")
         sys.exit(0)
     else:
-        sys.exit(
-            error(
-                c.red | "Uh-oh, there are errors:",
-                c.cyan | "{} files ok".format(ok) if ok else "",
-                c.red | "{} files failed".format(fails) if fails else "",
-                c.orange | "{} errors".format(errors) if errors else "",
-            )
+        error(
+            c.red | "Uh-oh, there are errors:",
+            c.cyan | "{} files ok".format(ok) if ok else "",
+            c.red | "{} files failed".format(fails) if fails else "",
+            c.orange | "{} errors".format(errors) if errors else "",
         )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
