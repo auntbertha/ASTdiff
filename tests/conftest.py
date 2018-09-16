@@ -56,3 +56,16 @@ def ast_set2():
         """
     )
     return ast.parse(code)
+
+
+@pytest.fixture
+def ast_line1():
+    code = dedent(
+        """
+        x = {1,
+        
+        
+             3}
+        """
+    )
+    return ast.parse(code)
