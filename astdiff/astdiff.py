@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 
-from typing import Union, List, Any, Sequence, Optional, Tuple
+from typing import Union, List, Any, Sequence, Optional, Tuple, Dict
 import ast
 import subprocess
 import sys
@@ -22,15 +22,25 @@ NodeType = Union[ast.AST, List, str]
 color = c.format
 
 
-def compare_ast(left, right, left_lineno, right_lineno):
-    # type: (NodeType, NodeType, int, int) -> None
+def compare_ast(left, right, line_counter=None):
+    # type: (NodeType, NodeType, Optional[Dict[str, int]]) -> None
     """Compare two abstract syntax trees.
 
     Return `None` if they are equal, and raise an exception otherwise.
     """
-    assert_equal(type(left), type(right), left_lineno, right_lineno)
+    if line_counter is None:
+        line_counter = {}
+
+    assert_equal(type(left), type(right), line_counter)
 
     if isinstance(left, ast.AST):
+        line_counter["left"] = getattr(
+            left, "lineno", line_counter.get("left", 1)
+        )
+        line_counter["right"] = getattr(
+            right, "lineno", line_counter.get("right", 1)
+        )
+
         left_fields = ast.iter_fields(left)
         right_fields = ast.iter_fields(right)
         for left_field, right_field in zip_longest(
@@ -38,22 +48,17 @@ def compare_ast(left, right, left_lineno, right_lineno):
         ):
             left_name, left_values = left_field
             right_name, right_values = right_field
-            assert_equal(left_name, right_name, left_lineno, right_lineno)
-            compare_ast(
-                left_values,
-                right_values,
-                getattr(left, "lineno", left_lineno),
-                getattr(right, "lineno", right_lineno),
-            )
+            assert_equal(left_name, right_name, line_counter)
+            compare_ast(left_values, right_values, line_counter)
     elif isinstance(left, list):
         for left_child, right_child in zip_longest(left, right, fillvalue=""):
-            compare_ast(left_child, right_child, left_lineno, right_lineno)
+            compare_ast(left_child, right_child, line_counter)
     else:
-        assert_equal(left, right, left_lineno, right_lineno)
+        assert_equal(left, right, line_counter)
 
 
-def assert_equal(left, right, left_lineno, right_lineno):
-    # type: (Any, Any, int, int) -> None
+def assert_equal(left, right, line_counter):
+    # type: (Any, Any, Dict[str, int]) -> None
     """Compare two objects.
 
     Return `None` if equal, and raise an exception with the line number
@@ -63,7 +68,10 @@ def assert_equal(left, right, left_lineno, right_lineno):
         "different nodes:\n"
         "line {} in first commit: {}\n"
         "line {} in second commit: {}".format(
-            left_lineno, nice(left), right_lineno, nice(right)
+            line_counter.get("left", 0),
+            nice(left),
+            line_counter.get("right", 0),
+            nice(right),
         )
     )
 
@@ -227,7 +235,7 @@ def astdiff(commits):
             )
             old = get_object(commit1, path)
             new = get_object(commit2, path)
-            compare_ast(ast.parse(old), ast.parse(new), 1, 1)
+            compare_ast(ast.parse(old), ast.parse(new))
             stderr(c.green | "ok")
             ok += 1
         except AssertionError as exc:
