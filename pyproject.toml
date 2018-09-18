@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "astdiff"
+version = "0.1.0"
+description = ""
+authors = ["Walter Moreira <wmoreira@auntbertha.com>"]
+
+[tool.poetry.dependencies]
+python = "*"
+six = "^1.11"
+typing = "^3.6"
+colorful = "^0.4.1"
+click = "^6.7"
+
+[tool.poetry.dev-dependencies]
+pytest = "^3.0"
+ipython = "^6.5"
+
+[tool.poetry.scripts]
+astdiff = 'astdiff:astdiff.astdiff'
