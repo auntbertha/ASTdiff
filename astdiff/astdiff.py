@@ -114,7 +114,7 @@ def collect_paths(from_commit, to_commit):
     # type: (str, Optional[str]) -> List[string_types]
     """Get the list of changed files between two commits.
 
-    If `to_commit` is None, diff agains the current working tree.
+    If `to_commit` is None, diff against the current working tree.
     """
     cmd = "git diff --name-only {}".format(from_commit)
 

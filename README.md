@@ -39,7 +39,7 @@ and distribute the wheel or tarball from the directory `dist/`.
 ## Usage
 
 The most basic use of `astdiff` is to check that a reformatting tool didn't change the meaning of the code. When it's
-called with no arguments `astdiff` compares the working tree agains the HEAD of the current branch: 
+called with no arguments `astdiff` compares the working tree against the HEAD of the current branch:
 
 ```bash
 $ astdiff
