@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "astdiff"
 version = "0.1.0"
-description = ""
+description = "Ensure the invariance of the Abstract Syntax Tree across commits."
 authors = ["Walter Moreira <wmoreira@auntbertha.com>"]
 
 [tool.poetry.dependencies]
