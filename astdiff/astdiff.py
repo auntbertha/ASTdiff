@@ -148,6 +148,14 @@ def get_commits(commits):
     Return a pair of hashes identifying the range that we want to compare.
     The second commit equal to `None` signals that we want to compare against
     the working tree.
+
+    If there is only one commit of the form A...B, compare the base of the
+    fork with B. In the following case, get_commits(["A...B"]) is equivalent
+    to get_commits(["C", "B"]).
+
+             o---o---B
+            /
+        ---C---o---o---o---A
     """
     if not commits:
         commit2 = None
@@ -155,7 +163,9 @@ def get_commits(commits):
     elif len(commits) == 1:
         commit2 = commits[0]
         if "..." in commit2:
-            return commit2, None
+            c1, c2 = map(get_ref, commit2.split("..."))
+            base = shell("git merge-base {} {}".format(c1, c2))
+            return base, c2
         commit1 = "{}~1".format(get_ref(commit2))
     elif len(commits) == 2:
         commit1, commit2 = commits
@@ -203,6 +213,7 @@ def astdiff(commits):
     \b
     With no arguments, compare between HEAD and the working tree.
     With one argument COMMIT, compare between COMMIT~1 and COMMIT.
+    With one argument of the form A...B, compare the base of the fork against B.
     With two arguments, COMMIT1 and COMMIT2, compare between those two.
 
     (COMMIT2 can be a dot '.' to compare between COMMIT1 and the working tree)
