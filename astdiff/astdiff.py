@@ -154,6 +154,8 @@ def get_commits(commits):
         commit1 = "HEAD"
     elif len(commits) == 1:
         commit2 = commits[0]
+        if "..." in commit2:
+            return commit2, None
         commit1 = "{}~1".format(get_ref(commit2))
     elif len(commits) == 2:
         commit1, commit2 = commits
