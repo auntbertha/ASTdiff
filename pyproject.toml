@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "astdiff"
-version = "0.2.2"
+version = "0.2.3"
 description = "Ensure the invariance of the Abstract Syntax Tree across commits."
 authors = ["Walter Moreira <wmoreira@auntbertha.com>"]
 readme = "README.md"
