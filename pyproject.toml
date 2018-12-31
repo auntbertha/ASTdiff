@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "astdiff"
-version = "0.2.3"
+version = "0.2.4"
 description = "Ensure the invariance of the Abstract Syntax Tree across commits."
 authors = ["Walter Moreira <wmoreira@auntbertha.com>"]
 readme = "README.md"
@@ -12,11 +12,10 @@ python = "*"
 six = "^1.11"
 typing = "^3.6"
 colorful = "^0.4.1"
-click = "^6.7"
+click = "^7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^3.0"
-ipython = "^6.5"
 
 [tool.poetry.scripts]
 astdiff = 'astdiff:astdiff.astdiff'
