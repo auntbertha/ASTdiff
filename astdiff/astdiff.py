@@ -198,9 +198,8 @@ def error(*messages):
 def shell_error(message, exc):
     # type: (str, subprocess.CalledProcessError) -> None
     """Display an error from a shell command. """
-    _, cmd = exc.args
     # noinspection PyUnresolvedReferences
-    error(message, c.orange | "'{}' failed".format(" ".join(cmd)))
+    error(message, c.orange | "'{}' failed".format(" ".join(exc.cmd)))
 
 
 # noinspection PyUnresolvedReferences
